@@ -567,7 +567,9 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.VERCEL !== '1') {
+    // Only serve static files manually if NOT on Vercel
+    // Vercel handles static files via the "dist" output directory
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -575,12 +577,19 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  return app;
+}
+
+// Only start the server if this file is run directly
+if (process.env.VERCEL !== '1') {
+  startServer().then(app => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error('FATAL: Failed to start server:', err);
+    process.exit(1);
   });
 }
 
-startServer().catch(err => {
-  console.error('FATAL: Failed to start server:', err);
-  process.exit(1);
-});
+export { startServer };
