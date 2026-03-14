@@ -1,0 +1,5 @@
+{
+  "name": "SecretHub",
+  "description": "Plataforma SaaS segura para gerenciamento de credenciais, chaves de API e segredos de integração com criptografia AES-256.",
+  "requestFramePermissions": []
+}

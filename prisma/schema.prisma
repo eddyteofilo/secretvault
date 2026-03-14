@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  organizations Member[]
+  ownedOrgs     Organization[] @relation("OrgOwner")
+  credentials   Credential[]
+  auditLogs     AuditLog[]
+  subscription  Subscription?
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User      @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   Member[]
+  projects  Project[]
+  createdAt DateTime  @default(now())
+
+  @@index([ownerId])
+}
+
+model Member {
+  id             String       @id @default(uuid())
+  userId         String
+  organizationId String
+  role           String       // "ADMIN", "DEVELOPER", "VIEWER"
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Project {
+  id             String       @id @default(uuid())
+  name           String
+  description    String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credentials    Credential[]
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+model Credential {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment String            // "production", "staging", "dev"
+  createdBy   String
+  creator     User              @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  fields      CredentialField[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  auditLogs   AuditLog[]
+
+  @@index([projectId])
+  @@index([createdBy])
+}
+
+model CredentialField {
+  id             String     @id @default(uuid())
+  credentialId   String
+  credential     Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  fieldName      String
+  encryptedValue String
+  isSensitive    Boolean    @default(true)
+
+  @@index([credentialId])
+}
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  action       String      // "VIEW", "CREATE", "UPDATE", "DELETE"
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String?
+  credential   Credential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  details      String?
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
+  @@index([credentialId])
+}
+
+model Subscription {
+  id               String @id @default(uuid())
+  userId           String @unique
+  user             User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan             String // "FREE", "PRO", "TEAM"
+  status           String
+  stripeCustomerId String?
+
+  @@index([userId])
+}
