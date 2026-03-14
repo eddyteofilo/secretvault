@@ -1,4 +1,4 @@
-import { startServer } from '../server';
+import { startServer } from '../src/app';
 
 let cachedApp: any = null;
 
